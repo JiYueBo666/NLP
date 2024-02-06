@@ -40,7 +40,7 @@ def cut_method(string,word_dict,max_len):
 
 
 if __name__ == '__main__':
-    txt_path=r"E:\八斗课程-精品班\文件\week4 中文分词和tfidf特征应用\week4 中文分词和tfidf特征应用\上午-中文分词\dict.txt"
+    txt_path=r"E:中文分词\dict.txt"
     word_dict,max_len=load_word_dict(txt_path)
 
     string="测试字符串"
