@@ -148,8 +148,8 @@ def main():
     max_length = 20  # 样本最大长度
     learning_rate = 1e-3  # 学习率
 
-    vocab_path=r"E:\badouFile\文件\week4 中文分词和tfidf特征应用\week4 中文分词和tfidf特征应用\上午-中文分词\rnn分词\chars.txt"
-    corpus_path=r"E:\badouFile\文件\week4 中文分词和tfidf特征应用\week4 中文分词和tfidf特征应用\上午-中文分词\corpus\corpus.txt"
+    vocab_path=r"E:\chars.txt"
+    corpus_path=r"E:corpus\corpus.txt"
 
     vocab=build_vocab(vocab_path)
 
@@ -202,4 +202,4 @@ if __name__ == '__main__':
                      "沪胶后市有望延续强势",
                      "经过两个交易日的强势调整后",
                      "昨日上海天然橡胶期货价格再度大幅上扬"]
-    predict("rnn_segment_model.pth", r"E:\badouFile\文件\week4 中文分词和tfidf特征应用\week4 中文分词和tfidf特征应用\上午-中文分词\rnn分词\chars.txt", input_strings)
+    predict("rnn_segment_model.pth", r"E:\chars.txt", input_strings)
