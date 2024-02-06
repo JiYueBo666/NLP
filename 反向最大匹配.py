@@ -34,10 +34,10 @@ def cut_method_reverse(word_dict,max_len,string):
     words.reverse()
     return words
 if __name__ == '__main__':
-    txt_path = r"E:\八斗课程-精品班\文件\week4 中文分词和tfidf特征应用\week4 中文分词和tfidf特征应用\上午-中文分词\dict.txt"
+    txt_path = r"E:中文分词\dict.txt"
     word_dict, max_len = load_word_dict(txt_path)
 
-    string = "姬越博是谁"
+    string = "人工智能迅速发展"
 
     cut_result = cut_method_reverse(word_dict,max_len,string)
     print(cut_result)
