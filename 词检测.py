@@ -95,3 +95,23 @@ class newWordDetect:
                 p_chars *= self.word_count[char] / self.word_count_by_length[1]
                 self.pmi[word] = math.log(p_word / p_chars, 10) / len(word)
         return
+     def calc_word_values(self):
+    '''
+    评估词的可信度
+    :return:
+    '''
+    self.word_values={}
+    for word in self.pmi:
+        if len(word) < 2 or "，" in word:
+            continue
+        pmi = self.pmi.get(word, 1e-3)
+        le = self.word_left_entropy.get(word, 1e-3)
+        re = self.word_right_entropy.get(word, 1e-3)
+        self.word_values[word] = pmi *le * re
+
+if __name__ == '__main__':
+    nwd = new_word_dect(r"E:\corpus\corpus.txt")
+    value_sort = sorted([(word, count) for word, count in nwd.word_values.items()], key=lambda x: x[1], reverse=True)
+    print([x for x, c in value_sort if len(x) == 2][:10])
+    print([x for x, c in value_sort if len(x) == 3][:10])
+    print([x for x, c in value_sort if len(x) == 4][:10])
