@@ -1,0 +1,14 @@
+config={
+    'train_path':r"E:\算法实验\Bert下游任务-NER\LatticeLSTM-master\data\demo.train.txt",
+    'test_path':r"E:\算法实验\Bert下游任务-NER\LatticeLSTM-master\data\demo.test.txt",
+    'valid_path':r"E:\算法实验\Bert下游任务-NER\LatticeLSTM-master\data\demo.dev.txt",
+    'vocab_path':r"E:\python\bert_file\vocab.txt",
+    'bert_path':r"E:\python\bert_file",
+    'save_path':"bert_classfy_path",
+    'max_len':40,#最大句子长度
+    'batch_size':16,
+    'encode_dim':20,
+    'epoch':20,
+    'lr':0.00001,
+    'num_labels':17
+}
