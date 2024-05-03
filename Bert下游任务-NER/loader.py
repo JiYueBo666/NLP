@@ -1,147 +1,168 @@
-import  numpy as np
 import torch
-from torch.utils.data import DataLoader
 from Config import config
 from collections import defaultdict
-from transformers import BertTokenizer
+from torch.utils.data import DataLoader
+import jieba
+from utils import build_dict
 
-def get_key(val,my_dict):
-    for key, value in my_dict.items():
-         if val == value:
-             return key
+Label={
+    'O':0,
+    'B-LOC':1,
+    'I-LOC':2,
+    'B-PER':3,
+    'I-PER':4,
+    'B-ORG':5,
+    'I-ORG':6
+}
 
-class Dataset(torch.utils.data.Dataset):
-    def __init__(self,config):
-        self.config=config
+class Dataset:
+    def __init__(self,Config):
+        self.config=Config
 
-        self.train_sentences=[]  #[ sentence1,sentence2,...]
-        self.train_labels=[] #[ [BEOS,],[BEOS]...]
+        self.do_train=True
+        self.train_data=self.load_data(self.config['train_path'])
+        self.valid_data=self.load_data(self.config['valid_path'])
+        self.table=build_dict(self.train_data+self.valid_data)
 
-        self.test_sentences=[]
-        self.test_labels=[]
+    def encode_sentence(self,sentence,max_length=config['max_len']):
+        result=[]
+        if len(sentence)>=max_length:
+            sentence=sentence[:max_length]
+            result=[self.table[word]for word in sentence]
 
 
-        self.class_type = defaultdict(int)
-        self.mode='train'
-        self.tokenizer=BertTokenizer(config['vocab_path'])
+        elif len(sentence)<max_length:
+            result=[self.table[word]for word in sentence]
+            result.extend([0]*(max_length-len(sentence)))
+        return  result
 
-        self.load()
+    @staticmethod
+    def load_data(filename):
+        D = []
+        with open(filename, encoding='utf-8') as f:
+            f = f.read()
+            for l in f.split('\n\n'):
+                if not l:
+                    continue
+                d = ['']
+                label=[]#每个字对应的label
+                for i, c in enumerate(l.split('\n')):
+                    char, flag = c.split(' ')
+                    d[0] += char
+                    label.append(flag)
+                D.append([d,label])
+        return D
 
-    def load(self):
-        self.mode='train'
-        sentences=[]
-        labels=[]
-        with open(self.config['train_path'], 'r',encoding='utf8') as f:
-            sentence=''
-            label=[]
-            for line in f:
-                line=line.strip()
-                line=line.split(' ')
-                if len(line)>1:
-                    sentence+=line[0]
-                    label.append(line[1])
-                    self.class_type[line[1]]=self.class_type.get(line[1],len(self.class_type))
-                else:
-                    sentences.append(sentence)
-                    labels.append(label.copy())
-                    sentence=''
-                    label.clear()
-        f.close()
-        self.train_sentences=sentences
-        self.train_labels=labels
 
-    def load_test(self):
-        self.mode='test'
-        sentences = []
-        labels = []
-        with open(self.config['valid_path'], 'r', encoding='utf8') as f:
-            sentence = ''
-            label = []
-            for line in f:
-                line = line.strip()
-                line = line.split(' ')
-                if len(line) > 1:
-                    sentence += line[0]
-                    label.append(line[1])
-                    self.class_type[line[1]] = self.class_type.get(line[1], len(self.class_type))
-                else:
-                    sentences.append(sentence)
-                    labels.append(label.copy())
-                    sentence = ''
-                    label.clear()
-        f.close()
-        self.test_sentences = sentences
-        self.test_labels = labels
+    def __getitem__(self, item):
+        if self.do_train:
+            Encode_text, ps,pe,label=self.TokenizeAndEncode(self.train_data[item])
+            return self.train_data[item][0][0],torch.LongTensor(Encode_text), torch.LongTensor(ps), torch.LongTensor(
+                pe), torch.LongTensor(label)
 
-    def __getitem__(self, index):
-        if self.mode=='train':
-            #取出句子和标签
-            txt=self.train_sentences[index]
-            label=self.trans_label(self.train_labels[index])
 
-            #编码
-            input_ids, attention_mask, input_type =self.encoder(txt)
-            #label补齐到token长度
-            label = self.padding_label(txt, label)
+        else:
+            Encode_text, ps,pe,label = self.TokenizeAndEncode(self.valid_data[item])
 
-            res= [torch.LongTensor(input_ids),torch.LongTensor(attention_mask),torch.LongTensor(input_type),
-                    torch.LongTensor(label)]
-            return res
-        elif self.mode=='test':
-            txt = self.test_sentences[index]
-            label = self.trans_label(self.test_labels[index])
 
-            # 编码
-            input_ids, attention_mask, input_type = self.encoder(txt)
-            # label补齐到token长度
-            label = self.padding_label(txt, label)
+            return self.valid_data[item][0][0],torch.LongTensor(Encode_text), torch.LongTensor(ps), torch.LongTensor(pe),torch.LongTensor(label)
 
-            res = [torch.LongTensor(input_ids), torch.LongTensor(attention_mask), torch.LongTensor(input_type),
-                   torch.LongTensor(label)]
-            return res
 
     def __len__(self):
-        if self.mode=='train':
-            return len(self.train_sentences)
-        elif self.mode=='test':
-            return len(self.test_sentences)
+        if self.do_train:
+            return len(self.train_data)
+        else:
+            return len(self.valid_data)
 
-    def encoder(self,txt):
+    def TokenizeAndEncode(self,data:list):
         '''
-        编码字符串
-        :param txt:句子，汉字形式字符串
-        :return: 编码，mask，type_ids
+        :param data:[[sentence],[label]]
+        :return:
         '''
-        #tokenize
-        encode_output=self.tokenizer.encode_plus(txt,truncation=True,max_length=config['encode_dim'],
-                                                 padding='max_length')
 
-        input_ids,attention_mask,input_type=encode_output['input_ids'],encode_output['attention_mask'],\
-            encode_output['token_type_ids']
-        return input_ids,attention_mask,input_type
+        #第一步，对句子进行分词
+        sentence=data[0][0]#str的句子
+        label=data[1].copy()#句子的标签。
+        #第二步：添加position信息。
+        sentence_start_position=[i for i in range(len(sentence))]#对于单个字，tail和head的位置信息相同。
+        sentence_end_position=[i for i in range(len(sentence))]
 
-    def padding_label(self,txt,label):
-        if len(label)>=config['encode_dim']-2:
-            label=label[:config['encode_dim']-2]
-            label.insert(0,self.class_type['O'])
-            label.append(self.class_type['O'])
-            return label
+        sentence_cut=jieba.lcut(sentence)#[word1,word2,word3...]
 
-        #插入['end]对应
-        label.append(self.class_type['O'])
-        #插入[CLS]对应label
-        label.insert(0,self.class_type['O'])
-        label.extend([self.class_type['O']]*(config['encode_dim']-len(label)))
-        return label
+        for word in sentence_cut:
+            #确定该单词在原本句子中的位置
+            if len(word)>1:
+                start=sentence.find(word)
+                end=start+len(word)-1
 
-    def trans_label(self,label_list):
-        labels=[]
-        for label in label_list:
-            labels.append(self.class_type[label])
-        return labels
+                sentence+=word
+                sentence_start_position.extend([start]*len(word))
+                sentence_end_position.extend([end]*len(word))
+
+                label.extend([-1]*len(word))
+
+
+        if len(sentence_start_position)>config['max_len']:
+            sentence_start_position=sentence_start_position[:config['max_len']]
+            sentence_end_position = sentence_end_position[:config['max_len']]
+        else:
+            sentence_start_position.extend([-1] * (config['max_len'] - len(sentence_start_position)))
+            sentence_end_position.extend([-1] * (config['max_len'] - len(sentence_end_position)))
+
+
+        #对原句子利用bert进行编码
+        encode_text=self.encode_sentence(sentence)
+
+        if len(label)>config['max_len']:
+            label=label[:config['max_len']]
+        else:
+            #对扩展的部分补充标签
+            label.extend([-1]*(config['max_len']-len(label)))
+
+        for i in range(len(label)):
+            label[i]=Label.get(label[i],-1)
+        return encode_text,sentence_start_position,sentence_end_position,label
+
+    def encode(self,sentence):
+        sentence_start_position = [i for i in range(len(sentence))]  # 对于单个字，tail和head的位置信息相同。
+        sentence_end_position = [i for i in range(len(sentence))]
+
+        sentence_cut = jieba.lcut(sentence)  # [word1,word2,word3...]
+        for word in sentence_cut:
+            # 确定该单词在原本句子中的位置
+            if len(word) > 1:
+                start = sentence.find(word)
+                end = start + len(word) - 1
+
+                sentence += word
+                sentence_start_position.extend([start] * len(word))
+                sentence_end_position.extend([end] * len(word))
+
+        if len(sentence_start_position) > config['max_len']:
+            sentence_start_position = sentence_start_position[:config['max_len']]
+            sentence_end_position = sentence_end_position[:config['max_len']]
+        else:
+            sentence_start_position.extend([-1] * (config['max_len'] - len(sentence_start_position)))
+            sentence_end_position.extend([-1] * (config['max_len'] - len(sentence_end_position)))
+
+        # 对原句子利用bert进行编码
+        encode_text = self.encode_sentence(sentence)
+
+        return encode_text, sentence_start_position, sentence_end_position
+
+
+
+
+
 
 if __name__ == '__main__':
-    d=Dataset(config)
-    d.load_test()
-    dataloader=DataLoader(d,batch_size=config['batch_size'],shuffle=True)
+    data=Dataset(config)
+    data.do_train=False
 
+
+
+    dataloader=DataLoader(dataset=data,batch_size=config['batch_size'],shuffle=True)
+
+    for i,b in enumerate(dataloader):
+        sentence,_,_,_,_=b
+        print(len(sentence))
