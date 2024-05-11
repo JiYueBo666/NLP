@@ -1,9 +1,9 @@
 import torch
 
 config={
-    'train_path':r"E:\算法实验\Bert下游任务-NER\china-people-daily-ner-corpus\example.train.txt",
-    'test_path':r"E:\算法实验\Bert下游任务-NER\china-people-daily-ner-corpus\example.test.txt",
-    'valid_path':r"E:\算法实验\Bert下游任务-NER\china-people-daily-ner-corpus\example.dev.txt",
+    'train_path':r"E:\china-people-daily-ner-corpus\example.train.txt",
+    'test_path':r"E:\china-people-daily-ner-corpus\example.test.txt",
+    'valid_path':r"E:\china-people-daily-ner-corpus\example.dev.txt",
     'vocab_path':r"E:\python\pre_train_model\bert_file\vocab.txt",
     'bert_path':r"E:\python\pre_train_model\bert_file",
     'save_path':"bert_classfy_path",
