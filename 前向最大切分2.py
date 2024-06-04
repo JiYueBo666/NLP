@@ -72,7 +72,7 @@ def cut_method(string,word_dict):
 
 
 if __name__ == '__main__':
-    txt_path = r"E:\badouFile\文件\week4 中文分词和tfidf特征应用\week4 中文分词和tfidf特征应用\上午-中文分词\dict.txt"
+    txt_path = r"E:\dict.txt"
     string="人工智能迅速发展"
     word_dict=load_word_dict(txt_path)
     res=cut_method(string,word_dict)
